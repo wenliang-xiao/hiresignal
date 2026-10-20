@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HireSignal · 融资雷达</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #171a21; --border: #262b36;
+    --text: #e8eaf0; --muted: #8b93a5; --accent: #4f7cff; --accent2: #22c55e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 48px 20px 80px; }
+  header { text-align: center; margin-bottom: 40px; }
+  .logo { font-size: 34px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .slogan { color: var(--muted); margin-top: 8px; font-size: 15px; }
+  .searchbox { display: flex; gap: 10px; margin-bottom: 12px; }
+  input[type=text] {
+    flex: 1; padding: 14px 18px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); font-size: 16px; outline: none;
+  }
+  input[type=text]:focus { border-color: var(--accent); }
+  button {
+    padding: 14px 26px; border-radius: 12px; border: none; cursor: pointer;
+    background: var(--accent); color: #fff; font-size: 16px; font-weight: 600;
+  }
+  button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  .hint { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+  .status { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px; margin-bottom: 16px;
+  }
+  .card h3 { font-size: 19px; margin-bottom: 4px; }
+  .card h3 a { color: var(--accent); text-decoration: none; }
+  .tags { margin: 8px 0; }
+  .tag {
+    display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 12px;
+    background: rgba(79,124,255,.15); color: #9db4ff; margin-right: 6px;
+  }
+  .tag.green { background: rgba(34,197,94,.15); color: #7ce3a3; }
+  .desc { color: var(--muted); font-size: 14px; margin: 8px 0; }
+  .row { margin: 6px 0; font-size: 14px; }
+  .row b { color: var(--muted); font-weight: 500; margin-right: 6px; }
+  .contact { color: var(--accent2); text-decoration: none; }
+  .empty { color: var(--muted); text-align: center; padding: 40px 0; }
+  .ask-area { margin-top: 36px; border-top: 1px solid var(--border); padding-top: 24px; }
+  .ask-area h4 { margin-bottom: 10px; font-size: 15px; color: var(--muted); }
+  .answer { margin-top: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; font-size: 15px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">Hire<span>Signal</span> · 融资雷达</div>
+    <div class="slogan">用融资数据锁定「有钱且在扩张」的 startup，直连能拍板的人</div>
+  </header>
+
+  <div class="searchbox">
+    <input type="text" id="q" placeholder="搜公司 / 行业 / 赛道，如「具身智能」「红杉资本」" />
+    <button onclick="doSearch()">搜索</button>
+  </div>
+  <div class="hint">示例：输入公司名查融资与决策者；或直接向下方 AI 提问</div>
+  <div class="status" id="status"></div>
+  <div id="results"></div>
+
+  <div class="ask-area">
+    <h4>💬 问 HireSignal（自然语言）</h4>
+    <div class="searchbox">
+      <input type="text" id="ask" placeholder="最近人工智能赛道有哪些融资？" />
+      <button class="ghost" onclick="doAsk()">提问</button>
+    </div>
+    <div class="answer" id="answer" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+async function doSearch() {
+  const q = document.getElementById('q').value.trim();
+  if (!q) return;
+  const box = document.getElementById('results');
+  box.innerHTML = '<div class="empty">搜索中…</div>';
+  try {
+    const r = await fetch('/api/search?q=' + encodeURIComponent(q));
+    const d = await r.json();
+    if (!d.results || d.results.length === 0) {
+      box.innerHTML = '<div class="empty">暂无结果（请确认已配置数据源凭证）</div>';
+      return;
+    }
+    box.innerHTML = d.results.map(c => `
+      <div class="card">
+        <h3>${c.website ? `<a href="${c.website}" target="_blank">${c.name || c.name_cn || '?'}</a>` : (c.name || c.name_cn || '?')}</h3>
+        <div class="tags">
+          ${c.industry ? `<span class="tag">${c.industry}</span>` : ''}
+          ${c.round ? `<span class="tag green">${c.round}</span>` : ''}
+          ${c.source ? `<span class="tag">来源 ${c.source}</span>` : ''}
+        </div>
+        ${c.description ? `<div class="desc">${c.description}</div>` : ''}
+        ${(c.executives || []).length ? `<div class="row"><b>决策者</b>${c.executives.map(e => (e.name || '') + (e.title ? '（'+e.title+'）' : '')).join('、')}</div>` : ''}
+        ${(c.contacts || []).length ? `<div class="row"><b>联系方式</b>${c.contacts.map(x => `<a class="contact" href="${x.type==='email' ? 'mailto:'+x.value : x.value}" target="_blank">${x.value}</a>`).join(' · ')}</div>` : ''}
+      </div>`).join('');
+  } catch (e) {
+    box.innerHTML = '<div class="empty">请求失败：' + e + '</div>';
+  }
+}
+
+async function doAsk() {
+  const question = document.getElementById('ask').value.trim();
+  if (!question) return;
+  const box = document.getElementById('answer');
+  box.style.display = 'block';
+  box.textContent = '思考中…';
+  try {
+    const r = await fetch('/api/ask', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question})
+    });
+    const d = await r.json();
+    box.textContent = d.answer;
+  } catch (e) {
+    box.textContent = '提问失败：' + e;
+  }
+}
+
+(async () => {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    const ready = (d.providers || []).map(p => p.id);
+    document.getElementById('status').textContent = ready.length
+      ? '✅ 已接入数据源：' + ready.join('、')
+      : '⚠️ 尚未配置数据源凭证（鲸准 / 企查查），搜索返回空。见 .env.example';
+  } catch (e) {}
+})();
+document.getElementById('q').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+document.getElementById('ask').addEventListener('keydown', e => { if (e.key === 'Enter') doAsk(); });
+</script>
+</body>
+</html>
