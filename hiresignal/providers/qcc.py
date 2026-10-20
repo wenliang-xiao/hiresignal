@@ -46,7 +46,7 @@ class QccProvider(DataProvider):
         url = QCC_SERVERS[server]
         async with streamable_http_client(
             url, http_client=httpx.AsyncClient(headers=self._headers(), timeout=30)
-        ) as (read, write, _):
+        ) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 result = await session.call_tool(tool, arguments)
@@ -90,7 +90,7 @@ class QccProvider(DataProvider):
             url = QCC_SERVERS[server]
             async with streamable_http_client(
                 url, http_client=httpx.AsyncClient(headers=self._headers(), timeout=30)
-            ) as (read, write, _):
+            ) as (read, write):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     r = await session.list_tools()

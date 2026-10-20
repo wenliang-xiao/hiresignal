@@ -44,7 +44,7 @@ class JingdataProvider(DataProvider):
             http_client=httpx.AsyncClient(
                 headers={"Authorization": f"Bearer {self.token}"}, timeout=30
             ),
-        ) as (read, write, _):
+        ) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 return await session.call_tool(tool, arguments)
@@ -62,7 +62,7 @@ class JingdataProvider(DataProvider):
                 http_client=httpx.AsyncClient(
                     headers={"Authorization": f"Bearer {self.token}"}, timeout=30
                 ),
-            ) as (read, write, _):
+            ) as (read, write):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
                     r = await session.list_tools()
